@@ -312,3 +312,103 @@ def combined_plot_animation(start_node, goal_node, path_x, path_y, visited_waypo
     # print("combined_plot_animation_executed")
     plt.legend()
     plt.show()
+
+
+
+    
+#Main function
+if __name__ == '__main__':
+
+
+    #### testing case: inputs ####
+    clearance = 5
+    radius = 5
+    robot_step = 5
+    startpoint_x = 50
+    startpoint_y = 60
+    start_orientation = 30
+
+    goalpoint_x = 1150
+
+    goalpoint_y = 30
+    goal_orientation = 60
+    ######################
+
+    # clearance = int(input("Enter the clearance: "))  #Robot's clearance
+    # radius = int(input("Enter the radius of the robot: ")) #Robot's radius
+    while True:
+        try:
+            # robot_step = int(input("Enter the robot step size: "))  #Robot's step size
+            if 1 <= robot_step <= 10:
+                break  # Exit the loop if the input is within bounds
+            else:
+                print("Step size is not within bounds. Please enter a value between 1 and 10.")
+        except ValueError:
+            print("Invalid input. Please enter an integer value between 1 and 10.")
+
+    env_width = 1200 #Width of the workspace
+    env_height = 500 #Height of the workspace
+    environment = environment(env_width, env_height, clearance, radius) #Generating the workspace with the advised buffer
+    est_cost_to_goal = 0 #Initial cost to go
+
+    #Asking start co-ordinates and orientation of the robot from the user
+    # startpoint_x = int(input("Enter X coordinate of the start node (between 0 and 1200): "))
+    # startpoint_y = int(input("Enter Y coordinate of the start node (between 0 and 500): "))
+    # start_orientation = int(input("Enter the orientation of the robot at initial position (multiple of 30 degree): "))
+
+    #Rounding off the start orientation value to the nearest multiple of 30
+    rounding_int = int(start_orientation)
+    remainder_int = rounding_int % 30
+    if remainder_int < 15:
+        start_orientation = rounding_int - remainder_int
+    else:
+        start_orientation = rounding_int + (30 - remainder_int)
+
+    #Checking the validity of the given starting point in the workspace
+    if not check_move_legality(startpoint_x, startpoint_y, environment):
+        print("Start node is either out of bounds or in the obstacle")
+        exit(-1)
+
+    #Asking goal co-ordinates and orientation of the robot from the user
+    # goalpoint_x = int(input("Enter X coordinate of the goal node (between 0 and 1200): "))
+    # goalpoint_y = int(input("Enter Y coordinate of the goal node (between 0 and 500): "))
+    # goal_orientation = int(input("Enter the orientation of the robot at final position (multiple of 30 degree): "))
+    
+    #Rounding off the goal orientation value to the nearest multiple of 30
+    rounding_int = int(goal_orientation)
+    remainder_int = rounding_int % 30
+    if remainder_int < 15:
+        goal_orientation = rounding_int - remainder_int
+    else:
+        goal_orientation = rounding_int + (30 - remainder_int)
+
+    #Checking the validity of the given goal point in the workspace
+    if not check_move_legality(goalpoint_x, goalpoint_y, environment):
+        print("The goal is in the way of obstacles or out of bounds")
+        exit(-1)
+
+    start_timer = time.time() #Initialising timer to calculate the total computational time
+
+    #Forming the start node and the goal node objects
+    start_node = Waypoint(startpoint_x, startpoint_y, start_orientation, 0.0, -1, est_cost_to_goal)
+    goal_node = Waypoint(goalpoint_x, goalpoint_y, goal_orientation, 0.0, -1, est_cost_to_goal)
+    visited_waypoints, flag = astar_algorithm(start_node, goal_node, environment, robot_step)
+
+    #Plotting the most optimal path after verifying that the goal node has been reached
+    if (flag) == 1:
+        path_x, path_y = path_tracer(goal_node)
+        path_cost = goal_node.path_cost #Total cost to reach the goal node from the start node
+        print("Total cost for the path:", path_cost)
+
+        # plot(start_node, goal_node, path_x, path_y, visited_waypoints, environment)
+
+        # plot_node_exploration(start_node, goal_node, visited_waypoints, environment)
+
+        combined_plot_animation(start_node, goal_node, path_x, path_y, visited_waypoints, environment)
+
+        stop_timer = time.time() #Stopping the timer and displaying the time taken to reach the goal node from the start node while exploring all the nodes
+        total_time = stop_timer - start_timer
+        print("Total execution time  ", total_time)
+
+    else:
+        print("Path not found")

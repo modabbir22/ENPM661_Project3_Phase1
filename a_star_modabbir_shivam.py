@@ -177,85 +177,85 @@ def unique_id(node):
     return unique_id
 
 
-#Plotting the workspace and the shortest path
-def plot(start_node, goal_node, path_x, path_y, visited_nodes, environment):
-    fig, ax = plt.subplots()
-    my_colors = np.array([(150, 210, 230), (255, 128, 0), (130, 130, 130)], dtype=float) / 255  # Normalize values between 0 and 1
-    custom_cmap = ListedColormap(my_colors)
-    ax.imshow(environment, cmap= custom_cmap)
-    ax.invert_yaxis()  # Flip the y-axis to match the coordinate system
-    #  Mark start and goal
-    ax.plot(start_node.x_pos, start_node.y_pos, "Dw", markersize=4)  # Start
-    ax.plot(goal_node.x_pos, goal_node.y_pos, "Dr", markersize=4)  # Goal
+# a_star algorithm
+def astar_algorithm(start_pos, goal_pos, environment, move_step):
+    if goal_reached(start_pos, goal_pos):
+        return None
+   # declaring start and goal node
+    start_node = start_pos
+    goal_node = goal_pos
 
-    path_line, = ax.plot([], [], 'y', lw=2)  # Initialize the line for the path
+    available_actions = [0, 1, 2, 3, 4]
+    open_list = {}
+    closed_list = {}
+    priority_queue = []
+    visited_nodes = []
+    # initialize the open list to start exploration
+    start_id = unique_id(start_node)
+    open_list[(start_id)] = start_node
+    heapq.heappush(priority_queue, [start_node.path_cost, start_node])
+    # check if open list (prority queue) is not empty
+    while (len(priority_queue) != 0):
+        current_node = heapq.heappop(priority_queue)[1]
+        visited_nodes.append([current_node.x_pos, current_node.y_pos, current_node.orientation])
+        current_id = unique_id(current_node)
 
-    def init():
-        path_line.set_data([], [])
-        return path_line,
+        if goal_reached(current_node, goal_node):
+            goal_node.parent_id = current_node.parent_id
+            goal_node.path_cost = current_node.path_cost
+            print("Reached Goal")
+            return visited_nodes, 1
 
-    def update(frame):
-        # Update the path line to include up to the current frame
-        path_line.set_data(path_x[:frame], path_y[:frame])
-        return path_line,
+        if current_id in closed_list:
+            continue
+        else:
+            closed_list[current_id] = current_node
+        
+        del open_list[current_id]
 
-    frames = len(path_x)  # One frame for each step in the path
+        for action_code in available_actions:
+            x_pos, y_pos, orientation, path_cost = execute_movement(action_code, current_node.x_pos , current_node.y_pos , current_node.orientation , move_step, current_node.path_cost)
 
-    anim = FuncAnimation(fig, update, frames=frames, init_func=init, blit=True, repeat=False)
+            est_cost_to_goal = dist((x_pos, y_pos) , (goal_pos.x_pos , goal_pos.y_pos))
 
-    # Save the animation
-    anim.save('optimal_path_animation.mp4', writer='ffmpeg', fps=20)
-    print("plot_path_funtion_executed")
-    plt.show()
+            new_node = node(x_pos, y_pos, orientation, path_cost, current_node, est_cost_to_goal)
 
-def plot_node_exploration(start_node, goal_node, visited_nodes, environment):
-    fig, ax = plt.subplots()
-    my_colors = np.array([(150, 210, 230), (255, 128, 0), (130, 130, 130)], dtype=float) / 255  # Normalize values between 0 and 1
-    custom_cmap = ListedColormap(my_colors)
-    ax.imshow(environment, cmap=custom_cmap)
-    ax.invert_yaxis()  # Flip the y-axis to match the coordinate system
-    print("length of all_node:", len(visited_nodes))
-    # Mark start and goal
-    ax.plot(start_node.x_pos, start_node.y_pos, "Dw", markersize=4, label='Start')  # Start
-    ax.plot(goal_node.x_pos, goal_node.y_pos, "Dr", markersize=4, label='Goal')  # Goal
+            new_node_id = unique_id(new_node)
+            if not check_move_legality(new_node.x_pos, new_node.y_pos, environment):
+                continue
+            elif new_node_id in closed_list:
+                continue
+            
+            if new_node_id in open_list:
+                if new_node.path_cost < open_list[new_node_id].path_cost:
+                    open_list[new_node_id].path_cost = new_node.path_cost
+                    open_list[new_node_id].parent_id = new_node.parent_id
+            else:
+                open_list[new_node_id] = new_node
+            
+            heapq.heappush(priority_queue, [(new_node.path_cost + new_node.est_cost_to_goal), new_node])
+    # print("a_star_function_executed")
+    return visited_nodes, 0
 
-    # explored_nodes, = ax.plot([], [], "ob-", alpha=0.6, markersize=3, label='Explored Nodes')  # Initialize the line for explored nodes
-    explored_nodes, = ax.plot([], [], "ob", alpha=0.8, markersize=3, label='Explored Nodes')  # Initialize the line for explored nodes
+# back tracking the optimal path
+def backtracking(goal_pos):
+    path_x = []
+    path_y = []
+    path_x.append(goal_pos.x_pos)
+    path_y.append(goal_pos.y_pos)
 
-    def init():
-        explored_nodes.set_data([], [])
-        # explored_nodes.set_data(path_x[:frames], path_y[:frames])
-
-        return explored_nodes,
-
-    def update(frame):
-         # Determine the range of points to display in this frame
-        if frame >= len(visited_nodes):
-            return explored_nodes,
-        # Calculate the end_index for the current frame
-        end_index = min((frame + 1) * 200, len(visited_nodes))
-
-    # Extract coordinates up to end_index
-        x_coords, y_coords = zip(*[(wp[0], wp[1]) for wp in visited_nodes[:end_index]])
-
-        explored_nodes.set_data(x_coords, y_coords)
-        return explored_nodes,
-
-    
-    points_per_frame = 200
-    total_points = len(visited_nodes)
-    frames = math.ceil(total_points / points_per_frame)
-    anim = FuncAnimation(fig, update, frames=frames, init_func=init, blit=True, repeat=False, interval=100)
-
-    # Save the animation
-    anim.save('node_exploration_animation.mp4', writer='ffmpeg', fps=20)
-    print("plot_node_explore_funtion_executed")
-    plt.legend()
-    plt.show()
-    # time.sleep(5)
-    plt.close()
-
-
+    parent = goal_pos.parent_id
+    while parent != -1:
+        path_x.append(parent.x_pos)
+        path_y.append(parent.y_pos)
+        parent = parent.parent_id
+    path_x.reverse()
+    path_y.reverse()
+    # saving the path coordintes in two arrays for plotting
+    x_pos = np.asarray(path_x)
+    y_pos = np.asanyarray(path_y)
+    # print("plot_tracer_funtion_executed")
+    return x_pos, y_pos
 
 # visualizing the explored_nodes and generate_path
 
@@ -465,7 +465,7 @@ if __name__ == '__main__':
 
     #Plotting the most optimal path after verifying that the goal node has been reached
     if (flag) == 1:
-        path_x, path_y = path_tracer(goal_node)
+        path_x, path_y = backtracking(goal_node)
         path_cost = goal_node.path_cost #Total cost to reach the goal node from the start node
         print("Total cost for the path:", path_cost)
 

@@ -176,3 +176,82 @@ def goal_reached(current_pos, goal_pos):
 def unique_id(node):
     unique_id =  501 * node.x_pos + 1201 * node.y_pos
     return unique_id
+
+
+#Plotting the workspace and the shortest path
+def plot(start_node, goal_node, path_x, path_y, visited_nodes, environment):
+    fig, ax = plt.subplots()
+    my_colors = np.array([(150, 210, 230), (255, 128, 0), (130, 130, 130)], dtype=float) / 255  # Normalize values between 0 and 1
+    custom_cmap = ListedColormap(my_colors)
+    ax.imshow(environment, cmap= custom_cmap)
+    ax.invert_yaxis()  # Flip the y-axis to match the coordinate system
+    #  Mark start and goal
+    ax.plot(start_node.x_pos, start_node.y_pos, "Dw", markersize=4)  # Start
+    ax.plot(goal_node.x_pos, goal_node.y_pos, "Dr", markersize=4)  # Goal
+
+    path_line, = ax.plot([], [], 'y', lw=2)  # Initialize the line for the path
+
+    def init():
+        path_line.set_data([], [])
+        return path_line,
+
+    def update(frame):
+        # Update the path line to include up to the current frame
+        path_line.set_data(path_x[:frame], path_y[:frame])
+        return path_line,
+
+    frames = len(path_x)  # One frame for each step in the path
+
+    anim = FuncAnimation(fig, update, frames=frames, init_func=init, blit=True, repeat=False)
+
+    # Save the animation
+    anim.save('optimal_path_animation.mp4', writer='ffmpeg', fps=20)
+    print("plot_path_funtion_executed")
+    plt.show()
+
+def plot_node_exploration(start_node, goal_node, visited_nodes, environment):
+    fig, ax = plt.subplots()
+    my_colors = np.array([(150, 210, 230), (255, 128, 0), (130, 130, 130)], dtype=float) / 255  # Normalize values between 0 and 1
+    custom_cmap = ListedColormap(my_colors)
+    ax.imshow(environment, cmap=custom_cmap)
+    ax.invert_yaxis()  # Flip the y-axis to match the coordinate system
+    print("length of all_node:", len(visited_nodes))
+    # Mark start and goal
+    ax.plot(start_node.x_pos, start_node.y_pos, "Dw", markersize=4, label='Start')  # Start
+    ax.plot(goal_node.x_pos, goal_node.y_pos, "Dr", markersize=4, label='Goal')  # Goal
+
+    # explored_nodes, = ax.plot([], [], "ob-", alpha=0.6, markersize=3, label='Explored Nodes')  # Initialize the line for explored nodes
+    explored_nodes, = ax.plot([], [], "ob", alpha=0.8, markersize=3, label='Explored Nodes')  # Initialize the line for explored nodes
+
+    def init():
+        explored_nodes.set_data([], [])
+        # explored_nodes.set_data(path_x[:frames], path_y[:frames])
+
+        return explored_nodes,
+
+    def update(frame):
+         # Determine the range of points to display in this frame
+        if frame >= len(visited_nodes):
+            return explored_nodes,
+        # Calculate the end_index for the current frame
+        end_index = min((frame + 1) * 200, len(visited_nodes))
+
+    # Extract coordinates up to end_index
+        x_coords, y_coords = zip(*[(wp[0], wp[1]) for wp in visited_nodes[:end_index]])
+
+        explored_nodes.set_data(x_coords, y_coords)
+        return explored_nodes,
+
+    
+    points_per_frame = 200
+    total_points = len(visited_nodes)
+    frames = math.ceil(total_points / points_per_frame)
+    anim = FuncAnimation(fig, update, frames=frames, init_func=init, blit=True, repeat=False, interval=100)
+
+    # Save the animation
+    anim.save('node_exploration_animation.mp4', writer='ffmpeg', fps=20)
+    print("plot_node_explore_funtion_executed")
+    plt.legend()
+    plt.show()
+    # time.sleep(5)
+    plt.close()

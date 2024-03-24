@@ -13,8 +13,7 @@ from math import dist
 import matplotlib.pyplot as plt
 import time
 import heapq
-from matplotlib.animation import FuncAnimation #, PillowWriter
-# import matplotlib.patches as patches
+from matplotlib.animation import FuncAnimation
 from matplotlib.colors import ListedColormap
 
 # Class to represent graph nodes

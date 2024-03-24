@@ -258,41 +258,72 @@ def plot_node_exploration(start_node, goal_node, visited_nodes, environment):
 
 
 # visualizing the explored_nodes and generate_path
-def combined_plot_animation(start_node, goal_node, path_x, path_y, visited_waypoints, environment):
+
+#Plotting the workspace and the shortest path
+def plot(start_node, goal_node, path_x, path_y, visited_waypoints, environment):
     fig, ax = plt.subplots()
-    # defining custom color code
+    my_colors = np.array([(150, 210, 230), (255, 128, 0), (130, 130, 130)], dtype=float) / 255  # Normalize values between 0 and 1
+    custom_cmap = ListedColormap(my_colors)
+    ax.imshow(environment, cmap= custom_cmap)
+    ax.invert_yaxis()  # Flip the y-axis to match the coordinate system
+    #  Mark start and goal
+    ax.plot(start_node.x_pos, start_node.y_pos, "Dw", markersize=4)  # Start
+    ax.plot(goal_node.x_pos, goal_node.y_pos, "Dr", markersize=4)  # Goal
+
+    path_line, = ax.plot([], [], 'y', lw=2)  # Initialize the line for the path
+
+    def init():
+        path_line.set_data([], [])
+        return path_line,
+
+    def update(frame):
+        # Update the path line to include up to the current frame
+        path_line.set_data(path_x[:frame], path_y[:frame])
+        return path_line,
+
+    frames = len(path_x)  # One frame for each step in the path
+
+    anim = FuncAnimation(fig, update, frames=frames, init_func=init, blit=True, repeat=False)
+
+    # Save the animation
+    anim.save('optimal_path_animation.mp4', writer='ffmpeg', fps=40)
+    print("plot_path_funtion_executed")
+    plt.show()
+
+def plot_node_exploration(start_node, goal_node, visited_waypoints, environment):
+    fig, ax = plt.subplots()
     my_colors = np.array([(150, 210, 230), (255, 128, 0), (130, 130, 130)], dtype=float) / 255  # Normalize values between 0 and 1
     custom_cmap = ListedColormap(my_colors)
     ax.imshow(environment, cmap=custom_cmap)
-    ax.invert_yaxis()  # Flip the y-axis to change the coordinate system (frame)
-
+    ax.invert_yaxis()  # Flip the y-axis to match the coordinate system
+    print("length of all_node:", len(visited_waypoints))
     # Mark start and goal
-    ax.plot(start_node.x_pos, start_node.y_pos, "Dw", markersize=4, label='Start')  # plot start node
-    ax.plot(goal_node.x_pos, goal_node.y_pos, "Dr", markersize=4, label='Goal')  # plot goal node
+    ax.plot(start_node.x_pos, start_node.y_pos, "Dw", markersize=4, label='Start')  # Start
+    ax.plot(goal_node.x_pos, goal_node.y_pos, "Dr", markersize=4, label='Goal')  # Goal
 
-    # Initialize path line (yellow, initially hidden) and explored nodes line (blue)
-    path_line, = ax.plot([], [], 'y', lw=2, label='Path', visible=False)  # Initially hidden path
-    explored_nodes, = ax.plot([], [], "ob", alpha=0.8, markersize=2, label='Explored Nodes')
+    # explored_nodes, = ax.plot([], [], "ob-", alpha=0.6, markersize=3, label='Explored Nodes')  # Initialize the line for explored nodes
+    explored_nodes, = ax.plot([], [], "ob", alpha=0.8, markersize=3, label='Explored Nodes')  # Initialize the line for explored nodes
 
     def init():
         explored_nodes.set_data([], [])
-        path_line.set_data([], [])
-        return explored_nodes, path_line
+        # explored_nodes.set_data(path_x[:frames], path_y[:frames])
+
+        return explored_nodes,
 
     def update(frame):
-        if frame < total_frames - len(path_x) + 1:  # Show explored nodes until path_line starts
-            end_index = min((frame + 1) * max_nodes_per_frame, len(visited_waypoints))
-            x_coords, y_coords = zip(*[(wp[0], wp[1]) for wp in visited_waypoints[:end_index]])
-            explored_nodes.set_data(x_coords, y_coords)
-            print("frame_no.:", frame)
+         # Determine the range of points to display in this frame
+        if frame >= len(visited_waypoints):
+            return explored_nodes,
+        # Calculate the end_index for the current frame
+        # end_index = min((frame + 1) * 200, len(visited_waypoints))
+        end_index = min((frame + 1) * max_nodes_per_frame, len(visited_waypoints))
 
-        if frame >= total_frames - len(path_x) + 1:
-            path_line.set_data(path_x[:frame - (total_frames - len(path_x))], path_y[:frame - (total_frames - len(path_x))])
-            path_line.set_visible(True)  # Make path visible starting from the appropriate frame
-            print("frame_no.for path_line:", frame)
-        return explored_nodes, path_line
+    # Extract coordinates up to end_index
+        x_coords, y_coords = zip(*[(wp[0], wp[1]) for wp in visited_waypoints[:end_index]])
 
-    total_points = len(visited_waypoints)  # Not used in this version
+        explored_nodes.set_data(x_coords, y_coords)
+        return explored_nodes,
+
     if len(visited_waypoints)> 200:
         max_nodes_per_frame = 1000
     else:max_nodes_per_frame = 100
@@ -302,42 +333,81 @@ def combined_plot_animation(start_node, goal_node, path_x, path_y, visited_waypo
     total_frames = first_plot_frame_T_no + len(path_x)
     print("creating video file")
     print("total_frames:", total_frames)
-    # anim = FuncAnimation(fig, update, frames=frames, init_func=init, blit=True, repeat=False, interval=100)
-    anim = FuncAnimation(fig, update, frames=total_frames, init_func=init, blit=True, repeat=False, interval=100)
+
+    # total_points = len(visited_waypoints)
+    # points_per_frame = 200
+    # frames = math.ceil(total_points / points_per_frame)
+    anim = FuncAnimation(fig, update, frames=frames, init_func=init, blit=True, repeat=False, interval=100)
 
     # Save the animation
-    anim.save('exploration_and_path_animation.mp4', writer='ffmpeg', fps=20)
-    print("video file saved!","\n","showing the exploration...")
-    # print("combined_plot_animation_executed")
+    anim.save('node_exploration_animation.mp4', writer='ffmpeg', fps=30)
+    print("plot_node_explore_funtion_executed")
     plt.legend()
     plt.show()
-
-
-
     
+# code to generate common visualization video for the code 
+# def combined_plot_animation(start_node, goal_node, path_x, path_y, visited_waypoints, environment):
+#     fig, ax = plt.subplots()
+#     # defining custom color code
+#     my_colors = np.array([(150, 210, 230), (255, 128, 0), (130, 130, 130)], dtype=float) / 255  # Normalize values between 0 and 1
+#     custom_cmap = ListedColormap(my_colors)
+#     ax.imshow(environment, cmap=custom_cmap)
+#     ax.invert_yaxis()  # Flip the y-axis to change the coordinate system (frame)
+
+#     # Mark start and goal
+#     ax.plot(start_node.x_pos, start_node.y_pos, "Dw", markersize=4, label='Start')  # plot start node
+#     ax.plot(goal_node.x_pos, goal_node.y_pos, "Dr", markersize=4, label='Goal')  # plot goal node
+
+#     # Initialize path line (yellow, initially hidden) and explored nodes line (blue)
+#     path_line, = ax.plot([], [], 'y', lw=2, label='Path', visible=False)  # Initially hidden path
+#     explored_nodes, = ax.plot([], [], "ob", alpha=0.8, markersize=2, label='Explored Nodes')
+
+#     def init():
+#         explored_nodes.set_data([], [])
+#         path_line.set_data([], [])
+#         return explored_nodes, path_line
+
+#     def update(frame):
+#         if frame < total_frames - len(path_x) + 1:  # Show explored nodes until path_line starts
+#             end_index = min((frame + 1) * max_nodes_per_frame, len(visited_waypoints))
+#             x_coords, y_coords = zip(*[(wp[0], wp[1]) for wp in visited_waypoints[:end_index]])
+#             explored_nodes.set_data(x_coords, y_coords)
+#             print("frame_no.:", frame)
+
+#         if frame >= total_frames - len(path_x) + 1:
+#             path_line.set_data(path_x[:frame - (total_frames - len(path_x))], path_y[:frame - (total_frames - len(path_x))])
+#             path_line.set_visible(True)  # Make path visible starting from the appropriate frame
+#             print("frame_no.for path_line:", frame)
+#         return explored_nodes, path_line
+
+#     total_points = len(visited_waypoints)  # Not used in this version
+#     if len(visited_waypoints)> 200:
+#         max_nodes_per_frame = 1000
+#     else:max_nodes_per_frame = 100
+#     # frames = len(path_x)  # Use total path length for frames
+#     frames = (len(visited_waypoints) + 99) // max_nodes_per_frame
+#     first_plot_frame_T_no = frames
+#     total_frames = first_plot_frame_T_no + len(path_x)
+#     print("creating video file")
+#     print("total_frames:", total_frames)
+#     # anim = FuncAnimation(fig, update, frames=frames, init_func=init, blit=True, repeat=False, interval=100)
+#     anim = FuncAnimation(fig, update, frames=total_frames, init_func=init, blit=True, repeat=False, interval=100)
+
+#     # Save the animation
+#     anim.save('exploration_and_path_animation.mp4', writer='ffmpeg', fps=20)
+#     print("video file saved!","\n","showing the exploration...")
+#     # print("combined_plot_animation_executed")
+#     plt.legend()
+#     plt.show()
+
+   
 #Main function
 if __name__ == '__main__':
-
-
-    #### testing case: inputs ####
-    clearance = 5
-    radius = 5
-    robot_step = 5
-    startpoint_x = 50
-    startpoint_y = 60
-    start_orientation = 30
-
-    goalpoint_x = 1150
-
-    goalpoint_y = 30
-    goal_orientation = 60
-    ######################
-
-    # clearance = int(input("Enter the clearance: "))  #Robot's clearance
-    # radius = int(input("Enter the radius of the robot: ")) #Robot's radius
+    clearance = int(input("Enter the clearance: "))  #Robot's clearance
+    radius = int(input("Enter the radius of the robot: ")) #Robot's radius
     while True:
         try:
-            # robot_step = int(input("Enter the robot step size: "))  #Robot's step size
+            robot_step = int(input("Enter the robot step size: "))  #Robot's step size
             if 1 <= robot_step <= 10:
                 break  # Exit the loop if the input is within bounds
             else:
@@ -351,9 +421,9 @@ if __name__ == '__main__':
     est_cost_to_goal = 0 #Initial cost to go
 
     #Asking start co-ordinates and orientation of the robot from the user
-    # startpoint_x = int(input("Enter X coordinate of the start node (between 0 and 1200): "))
-    # startpoint_y = int(input("Enter Y coordinate of the start node (between 0 and 500): "))
-    # start_orientation = int(input("Enter the orientation of the robot at initial position (multiple of 30 degree): "))
+    startpoint_x = int(input("Enter X coordinate of the start node (between 0 and 1200): "))
+    startpoint_y = int(input("Enter Y coordinate of the start node (between 0 and 500): "))
+    start_orientation = int(input("Enter the orientation of the robot at initial position (multiple of 30 degree): "))
 
     #Rounding off the start orientation value to the nearest multiple of 30
     rounding_int = int(start_orientation)
@@ -369,9 +439,9 @@ if __name__ == '__main__':
         exit(-1)
 
     #Asking goal co-ordinates and orientation of the robot from the user
-    # goalpoint_x = int(input("Enter X coordinate of the goal node (between 0 and 1200): "))
-    # goalpoint_y = int(input("Enter Y coordinate of the goal node (between 0 and 500): "))
-    # goal_orientation = int(input("Enter the orientation of the robot at final position (multiple of 30 degree): "))
+    goalpoint_x = int(input("Enter X coordinate of the goal node (between 0 and 1200): "))
+    goalpoint_y = int(input("Enter Y coordinate of the goal node (between 0 and 500): "))
+    goal_orientation = int(input("Enter the orientation of the robot at final position (multiple of 30 degree): "))
     
     #Rounding off the goal orientation value to the nearest multiple of 30
     rounding_int = int(goal_orientation)
@@ -389,9 +459,9 @@ if __name__ == '__main__':
     start_timer = time.time() #Initialising timer to calculate the total computational time
 
     #Forming the start node and the goal node objects
-    start_node = Waypoint(startpoint_x, startpoint_y, start_orientation, 0.0, -1, est_cost_to_goal)
-    goal_node = Waypoint(goalpoint_x, goalpoint_y, goal_orientation, 0.0, -1, est_cost_to_goal)
-    visited_waypoints, flag = astar_algorithm(start_node, goal_node, environment, robot_step)
+    start_node = node(startpoint_x, startpoint_y, start_orientation, 0.0, -1, est_cost_to_goal)
+    goal_node = node(goalpoint_x, goalpoint_y, goal_orientation, 0.0, -1, est_cost_to_goal)
+    visited_nodes, flag = astar_algorithm(start_node, goal_node, environment, robot_step)
 
     #Plotting the most optimal path after verifying that the goal node has been reached
     if (flag) == 1:
@@ -399,11 +469,11 @@ if __name__ == '__main__':
         path_cost = goal_node.path_cost #Total cost to reach the goal node from the start node
         print("Total cost for the path:", path_cost)
 
-        # plot(start_node, goal_node, path_x, path_y, visited_waypoints, environment)
-
-        # plot_node_exploration(start_node, goal_node, visited_waypoints, environment)
-
-        combined_plot_animation(start_node, goal_node, path_x, path_y, visited_waypoints, environment)
+        plot_node_exploration(start_node, goal_node, visited_nodes, environment)
+        # Wait for 5 seconds
+        time.sleep(5)
+        plot(start_node, goal_node, path_x, path_y, visited_nodes, environment)
+        # combined_plot_animation(start_node, goal_node, path_x, path_y, visited_nodes, environment)
 
         stop_timer = time.time() #Stopping the timer and displaying the time taken to reach the goal node from the start node while exploring all the nodes
         total_time = stop_timer - start_timer
